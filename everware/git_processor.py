@@ -118,6 +118,12 @@ class GitMixin:
         else:
             return True
 
+    @gen.coroutine
+    def prepare_everware_yml(self):
+        everware_yml_path = os.path.join(self._repo_dir, 'everware.yml')
+        if os.path.isfile(everware_yml_path):
+            self.parse(everware_yml_path)
+
 
     @property
     def escaped_repo_url(self):
@@ -176,4 +182,26 @@ class GitMixin:
         for key in self.STATE_VARS:
             if key in state:
                 setattr(self, key, state[key])
+
+    def parse(self, everware_yml):
+        import yaml
+        with open(everware_yml) as file:
+            text = yaml.load(file)
+        volumes = []
+        for element in text:
+            volumes += text.get(element).get("volumes")
+        for volume in volumes:
+            #check url
+            self.download_file(volume)
+
+    def download_file(self, url):
+        import urllib
+        filename = url.split("/")[-1]
+        if len(filename) == 0:
+            filename = url.split("/")[-2]
+        #should think about deleting this folder someday
+        self.directory_volume = self._repo_dir + "-volume"
+        os.mkdir(self.directory_volume)
+        urllib.request.urlretrieve(url, self.directory_volume + '/' + filename)
+
 

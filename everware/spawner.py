@@ -268,6 +268,7 @@ class CustomDockerSpawner(DockerSpawner, GitMixin, EmailNotificator):
             ))
             self.log.info('Cloning repo %s' % self.repo_url)
             dockerfile_exists = yield self.prepare_local_repo()
+            self.prepare_everware_yml()
             if not dockerfile_exists:
                 self._add_to_log('No dockerfile. Use the default one %s' % os.environ['DEFAULT_DOCKER_IMAGE'])
 
@@ -371,6 +372,8 @@ class CustomDockerSpawner(DockerSpawner, GitMixin, EmailNotificator):
                 yield self.remove_old_container()
             self.log.info("Starting container from image: %s" % image_name)
             self._add_to_log('Creating container')
+            #can't mount into /notebooks folder - it deletes all git files
+            self.volumes = {self.directory_volume: "/notebook/data"}
             yield super(CustomDockerSpawner, self).start(
                 image=image_name
             )
