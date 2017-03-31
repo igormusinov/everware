@@ -373,7 +373,7 @@ class CustomDockerSpawner(DockerSpawner, GitMixin, EmailNotificator):
             self.log.info("Starting container from image: %s" % image_name)
             self._add_to_log('Creating container')
             #can't mount into /notebooks folder - it deletes all git files
-            self.volumes = {self.directory_volume: "/notebook/data"}
+            self.volumes = {self._repo_dir + "-volume": "/notebook/data"}
             yield super(CustomDockerSpawner, self).start(
                 image=image_name
             )
