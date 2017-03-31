@@ -120,10 +120,11 @@ class GitMixin:
 
     @gen.coroutine
     def prepare_everware_yml(self):
+        self.everware_yml_param = {}
         everware_yml_path = os.path.join(self._repo_dir, 'everware.yml')
         if os.path.isfile(everware_yml_path):
             self.parse(everware_yml_path)
-
+        return self.everware_yml_param
 
     @property
     def escaped_repo_url(self):
@@ -200,8 +201,13 @@ class GitMixin:
         if len(filename) == 0:
             filename = url.split("/")[-2]
         #should think about deleting this folder someday
-        self.directory_volume = self._repo_dir + "-volume"
-        os.mkdir(self.directory_volume)
-        urllib.request.urlretrieve(url, self.directory_volume + '/' + filename)
+        directory_volume = self._repo_dir + "-volume"
+        os.mkdir(directory_volume)
+        try:
+            urllib.request.urlretrieve(url, directory_volume + '/' + filename)
+            self.everware_yml_param["directory_volume"] = directory_volume
+        except:
+            #some work
+            pass
 
 

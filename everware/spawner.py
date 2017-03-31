@@ -39,6 +39,7 @@ class CustomDockerSpawner(DockerSpawner, GitMixin, EmailNotificator):
         self._image_handler = ImageHandler()
         self._cur_waiter = None
         self._is_empty = False
+        self.everware_yml_param = {}
         DockerSpawner.__init__(self, **kwargs)
         EmailNotificator.__init__(self)
 
@@ -268,7 +269,7 @@ class CustomDockerSpawner(DockerSpawner, GitMixin, EmailNotificator):
             ))
             self.log.info('Cloning repo %s' % self.repo_url)
             dockerfile_exists = yield self.prepare_local_repo()
-            self.prepare_everware_yml()
+            self.everware_yml_param = yield self.prepare_everware_yml()
             if not dockerfile_exists:
                 self._add_to_log('No dockerfile. Use the default one %s' % os.environ['DEFAULT_DOCKER_IMAGE'])
 
@@ -373,7 +374,8 @@ class CustomDockerSpawner(DockerSpawner, GitMixin, EmailNotificator):
             self.log.info("Starting container from image: %s" % image_name)
             self._add_to_log('Creating container')
             #can't mount into /notebooks folder - it deletes all git files
-            self.volumes = {self._repo_dir + "-volume": "/notebook/data"}
+            if self.everware_yml_param.get("directory_volume"):
+                self.volumes = {self.everware_yml_param.get("directory_volume") : "/notebook/data"}
             yield super(CustomDockerSpawner, self).start(
                 image=image_name
             )
