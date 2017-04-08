@@ -166,8 +166,16 @@ class GitMixin:
     @property
     def repo_url_with_token(self):
         cur_service = self._service
-        if self.token:
-            cur_service = self.token + '@' + cur_service
+
+        token = None
+        if hasattr(self.user, 'token'):
+            token = self.user.token
+        elif hasattr(self.authenticator, 'test_token'):
+            token = self.authenticator.test_token
+
+        if token and self.user.escaped_name:
+            cur_service = self.user.escaped_name + ':' + token + '@' + self._service
+
         return '{proto}://{service}/{owner}/{repo}'.format(
             proto=self._protocol,
             service=cur_service,
