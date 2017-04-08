@@ -2,6 +2,7 @@ import re
 import git
 from concurrent.futures import ThreadPoolExecutor
 from tornado import gen
+from  tornado.httpclient import AsyncHTTPClient
 import os
 import os.path
 
@@ -123,7 +124,7 @@ class GitMixin:
         self.everware_yml_param = {}
         everware_yml_path = os.path.join(self._repo_dir, 'everware.yml')
         if os.path.isfile(everware_yml_path):
-            self.parse(everware_yml_path)
+            self.parse_everware_yml(everware_yml_path)
         return self.everware_yml_param
 
     @property
@@ -192,28 +193,32 @@ class GitMixin:
             if key in state:
                 setattr(self, key, state[key])
 
-    def parse(self, everware_yml):
+    def parse_everware_yml(self, everware_yml):
         import yaml
         with open(everware_yml) as file:
             text = yaml.load(file)
-        volumes = []
+        all_data = []
         for element in text:
-            volumes += text.get(element).get("volumes")
-        for volume in volumes:
+            all_data += text.get(element).get("data")
+        for data in all_data:
             #check url
-            self.download_file(volume)
+            self.download_file(data)
 
+    @gen.coroutine
     def download_file(self, url):
-        import urllib
+        http_client = AsyncHTTPClient()
         filename = url.split("/")[-1]
         if len(filename) == 0:
             filename = url.split("/")[-2]
         #should think about deleting this folder someday
-        directory_volume = self._repo_dir + "-volume"
-        os.mkdir(directory_volume)
+        directory_data = self._repo_dir + "-data"
+        os.mkdir(directory_data)
         try:
-            urllib.request.urlretrieve(url, directory_volume + '/' + filename)
-            self.everware_yml_param["directory_volume"] = directory_volume
+            response = yield http_client.fetch(url)
+            with open(directory_data + '/' + filename, "ab") as f:
+                f.write(response.body)
+            self.everware_yml_param["directory_data"] = directory_data
+            http_client.close()
         except:
             #some work
             pass

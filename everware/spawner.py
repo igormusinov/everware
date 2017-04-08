@@ -374,8 +374,8 @@ class CustomDockerSpawner(DockerSpawner, GitMixin, EmailNotificator):
             self.log.info("Starting container from image: %s" % image_name)
             self._add_to_log('Creating container')
             #can't mount into /notebooks folder - it deletes all git files
-            if self.everware_yml_param.get("directory_volume"):
-                self.volumes = {self.everware_yml_param.get("directory_volume") : "/notebook/data"}
+            if self.everware_yml_param.get("directory_data"):
+                self.volumes = {self.everware_yml_param.get("directory_data") : "/notebook/data"}
             yield super(CustomDockerSpawner, self).start(
                 image=image_name
             )
