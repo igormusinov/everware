@@ -135,14 +135,18 @@ class GitMixin:
             all_data = []
             for element in text:
                 all_data += text.get(element).get("data")
-            for url in all_data:
+            for data in all_data:
+                if type(data) == dict:
+                    url = data.get("url")
+                    ssl = data.get("ssl")
+                else:
+                    url = data
                 url_struct = urlparse(url)
                 self._user_log.append(({'text': "Start download from %s" % url_struct.geturl(), 'level': 2}))
                 if url_struct.scheme == "root":
-
-                    yield self.download_xrootd(url_struct)
+                    yield self.download_xrootd(url_struct, ssl)
                 else:
-                    yield self.download_http(url_struct)
+                    yield self.download_http(url_struct, ssl)
 
         self.everware_yml_param["user_log"] = self._user_log
         return self.everware_yml_param
@@ -221,7 +225,7 @@ class GitMixin:
             self.download_http(self, url_struct)
 
     @concurrent.run_on_executor(executor='_git_executor')
-    def download_xrootd(self, url_struct):
+    def download_xrootd(self, url_struct, ssl):
         try:
             from sh import xrdcp
         except:
@@ -244,12 +248,14 @@ class GitMixin:
         return
 
     @gen.coroutine
-    def download_http(self, url_struct):
+    def download_http(self, url_struct, ssl):
         http_client = AsyncHTTPClient()
         filename = url_struct.path.split("/")[-1]
         if len(filename) == 0:
             filename = url_struct.path.split("/")[-2]
-        #should think about deleting this folder someday
+        #folder with data files is deleted after container removing
+        if ssl:
+            pass
         try:
             self.log.info("Downloading from http server %s" % url_struct.hostname)
             response = yield http_client.fetch(url_struct.geturl())
