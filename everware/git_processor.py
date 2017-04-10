@@ -5,9 +5,9 @@ from tornado import gen,concurrent
 from  tornado.httpclient import AsyncHTTPClient
 import os
 import os.path
-from sh import xrdcp
 from urllib.parse import urlparse
 import yaml
+import socket
 
 
 class GitMixin:
@@ -217,7 +217,24 @@ class GitMixin:
 
     @concurrent.run_on_executor(executor='_git_executor')
     def download_xrootd(self, url_struct):
+        try:
+            from sh import xrdcp
+        except:
+            self.log.info("Sorry, but everware doesn't support xrootd now")
+            return
+        with socket.socket() as s:
+            s.settimeout(3)
+            try:
+                port = url_struct.port
+                if not port:
+                    port = 1094
+                s.connect((url_struct.hostname, port))
+            except:
+                self.log.info("Server %s doesn't respond" % url_struct.hostname)
+                return
+        self.log.info("Downloading from xrootd server %s" % url_struct.hostname)
         xrdcp("-r", url_struct.geturl(), self.directory_data)
+        self.log.info("Downloaded")
         return
 
     @gen.coroutine
@@ -228,12 +245,14 @@ class GitMixin:
             filename = url_struct.path.split("/")[-2]
         #should think about deleting this folder someday
         try:
+            self.log.info("Downloading from http server %s" % url_struct.hostname)
             response = yield http_client.fetch(url_struct.geturl())
             with open(self.directory_data + '/' + filename, "ab") as f:
                 f.write(response.body)
+            self.log.info("Downloaded")
             http_client.close()
         except:
-            #some work
+            self.log.info("Something went wrong during downloading from %s " % url_struct.hostname)
             pass
 
 
