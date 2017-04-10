@@ -5,6 +5,9 @@ from tornado import gen
 from  tornado.httpclient import AsyncHTTPClient
 import os
 import os.path
+from sh import xrdcp
+from urllib.parse import urlparse
+import yaml
 
 
 class GitMixin:
@@ -121,10 +124,22 @@ class GitMixin:
 
     @gen.coroutine
     def prepare_everware_yml(self):
-        self.everware_yml_param = {}
+        self.directory_data = self._repo_dir + "-data"
+        os.mkdir(self.directory_data)
+        self.everware_yml_param["directory_data"] = self.directory_data
         everware_yml_path = os.path.join(self._repo_dir, 'everware.yml')
         if os.path.isfile(everware_yml_path):
-            self.parse_everware_yml(everware_yml_path)
+            with open(everware_yml_path) as file:
+                text = yaml.load(file)
+            all_data = []
+            for element in text:
+                all_data += text.get(element).get("data")
+            for url in all_data:
+                url_struct = urlparse(url)
+                if url_struct.scheme == "root":
+                    yield self.download_xrootd(url_struct)
+                else:
+                    yield self.download_http(url_struct)
         return self.everware_yml_param
 
     @property
@@ -193,31 +208,28 @@ class GitMixin:
             if key in state:
                 setattr(self, key, state[key])
 
-    def parse_everware_yml(self, everware_yml):
-        import yaml
-        with open(everware_yml) as file:
-            text = yaml.load(file)
-        all_data = []
-        for element in text:
-            all_data += text.get(element).get("data")
-        for data in all_data:
-            #check url
-            self.download_file(data)
+    def download_file(self, url):
+        url_struct = urlparse(url)
+        if url_struct.scheme == "root":
+            self.download_xrootd(self, url_struct)
+        else:
+            self.download_http(self, url_struct)
 
     @gen.coroutine
-    def download_file(self, url):
+    def download_xrootd(self, url_struct):
+        xrdcp("-r", url_struct.geturl(), self.directory_data)
+
+    @gen.coroutine
+    def download_http(self, url_struct):
         http_client = AsyncHTTPClient()
-        filename = url.split("/")[-1]
+        filename = url_struct.path.split("/")[-1]
         if len(filename) == 0:
-            filename = url.split("/")[-2]
+            filename = url_struct.path.split("/")[-2]
         #should think about deleting this folder someday
-        directory_data = self._repo_dir + "-data"
-        os.mkdir(directory_data)
         try:
-            response = yield http_client.fetch(url)
-            with open(directory_data + '/' + filename, "ab") as f:
+            response = yield http_client.fetch(url_struct.geturl())
+            with open(self.directory_data + '/' + filename, "ab") as f:
                 f.write(response.body)
-            self.everware_yml_param["directory_data"] = directory_data
             http_client.close()
         except:
             #some work
