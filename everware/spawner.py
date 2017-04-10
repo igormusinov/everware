@@ -430,6 +430,7 @@ class CustomDockerSpawner(DockerSpawner, GitMixin, EmailNotificator):
                     self.container_name, self.container_id[:7])
                 # remove the container, as well as any associated volumes
                 yield self.docker('remove_container', self.container_id, v=True)
+                rmtree(self.everware_yml_param.get("directory_data"))
 
         self.clear_state()
 
