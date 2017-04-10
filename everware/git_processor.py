@@ -1,7 +1,7 @@
 import re
 import git
 from concurrent.futures import ThreadPoolExecutor
-from tornado import gen
+from tornado import gen,concurrent
 from  tornado.httpclient import AsyncHTTPClient
 import os
 import os.path
@@ -215,9 +215,10 @@ class GitMixin:
         else:
             self.download_http(self, url_struct)
 
-    @gen.coroutine
+    @concurrent.run_on_executor(executor='_git_executor')
     def download_xrootd(self, url_struct):
         xrdcp("-r", url_struct.geturl(), self.directory_data)
+        return
 
     @gen.coroutine
     def download_http(self, url_struct):
