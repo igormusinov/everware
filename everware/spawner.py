@@ -269,7 +269,8 @@ class CustomDockerSpawner(DockerSpawner, GitMixin, EmailNotificator):
             ))
             self.log.info('Cloning repo %s' % self.repo_url)
             dockerfile_exists = yield self.prepare_local_repo()
-            self.everware_yml_param = yield self.prepare_everware_yml()
+            self.everware_yml_param = yield self.prepare_everware_yml(self._user_log)
+            self._user_log = self._user_log and self.everware_yml_param["user_log"]
             if not dockerfile_exists:
                 self._add_to_log('No dockerfile. Use the default one %s' % os.environ['DEFAULT_DOCKER_IMAGE'])
 

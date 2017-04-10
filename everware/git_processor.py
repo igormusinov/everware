@@ -123,8 +123,9 @@ class GitMixin:
             return True
 
     @gen.coroutine
-    def prepare_everware_yml(self):
+    def prepare_everware_yml(self, _user_log):
         self.directory_data = self._repo_dir + "-data"
+        self._user_log = _user_log
         os.mkdir(self.directory_data)
         self.everware_yml_param["directory_data"] = self.directory_data
         everware_yml_path = os.path.join(self._repo_dir, 'everware.yml')
@@ -136,10 +137,14 @@ class GitMixin:
                 all_data += text.get(element).get("data")
             for url in all_data:
                 url_struct = urlparse(url)
+                self._user_log.append(({'text': "Start download from %s" % url_struct.geturl(), 'level': 2}))
                 if url_struct.scheme == "root":
+
                     yield self.download_xrootd(url_struct)
                 else:
                     yield self.download_http(url_struct)
+
+        self.everware_yml_param["user_log"] = self._user_log
         return self.everware_yml_param
 
     @property
@@ -235,6 +240,7 @@ class GitMixin:
         self.log.info("Downloading from xrootd server %s" % url_struct.hostname)
         xrdcp("-r", url_struct.geturl(), self.directory_data)
         self.log.info("Downloaded")
+        self._user_log.append(({'text': "Successfully downloaded from %s" % url_struct.geturl(), 'level': 2}))
         return
 
     @gen.coroutine
@@ -250,6 +256,7 @@ class GitMixin:
             with open(self.directory_data + '/' + filename, "ab") as f:
                 f.write(response.body)
             self.log.info("Downloaded")
+            self._user_log.append(({'text': "Successfully downloaded from %s" % url_struct.geturl(), 'level': 2}))
             http_client.close()
         except:
             self.log.info("Something went wrong during downloading from %s " % url_struct.hostname)
