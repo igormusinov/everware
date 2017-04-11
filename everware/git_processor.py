@@ -231,20 +231,14 @@ class GitMixin:
         except:
             self.log.info("Sorry, but everware doesn't support xrootd now")
             return
-        with socket.socket() as s:
-            s.settimeout(3)
-            try:
-                port = url_struct.port
-                if not port:
-                    port = 1094
-                s.connect((url_struct.hostname, port))
-            except:
-                self.log.info("Server %s doesn't respond" % url_struct.hostname)
-                return
-        self.log.info("Downloading from xrootd server %s" % url_struct.hostname)
-        xrdcp("-r", url_struct.geturl(), self.directory_data)
-        self.log.info("Downloaded")
-        self._user_log.append(({'text': "Successfully downloaded from %s" % url_struct.geturl(), 'level': 2}))
+        try:
+            self.log.info("Downloading from xrootd server %s" % url_struct.hostname)
+            xrdcp("-DIConnectionRetry 1", "-r", url_struct.geturl(), self.directory_data)
+            self.log.info("Downloaded")
+            self._user_log.append(({'text': "Successfully downloaded from %s" % url_struct.geturl(), 'level': 2}))
+        except:
+            self.log.info("Cannot download")
+            self._user_log.append(({'text': "Fail to download from %s" % url_struct.geturl(), 'level': 2}))
         return
 
     @gen.coroutine
