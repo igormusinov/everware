@@ -232,8 +232,9 @@ class GitMixin:
             self.log.info("Sorry, but everware doesn't support xrootd now")
             return
         try:
+            n_check_connection = 1
             self.log.info("Downloading from xrootd server %s" % url_struct.hostname)
-            xrdcp("-DIConnectionRetry 1", "-r", url_struct.geturl(), self.directory_data)
+            xrdcp("-DIConnectionRetry", n_check_connection,"-r", url_struct.geturl(), self.directory_data)
             self.log.info("Downloaded")
             self._user_log.append(({'text': "Successfully downloaded from %s" % url_struct.geturl(), 'level': 2}))
         except:
